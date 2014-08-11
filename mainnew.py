@@ -1,6 +1,7 @@
 from PyQt4 import QtGui, QtCore
 import sys
 from cherry import Ui_mainform
+from pop import Ui_Dialog
 from LineEdit import LineEdit
 import numpy as np
 import pandas as pd
@@ -166,11 +167,18 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.model.dataChanged.connect(self.pair_changed)
         inputHeader = inputData[0]
         Header = [ header for header in inputHeader.split('\t') ]
-        if(globalvar.type=="gene"):
-            print("gene")
+        #print(Header)
+        if(globalvar.type=="siRNA"):
+            if(set(Header).issubset(set(['RNA1', 'RNA2', 'cell.line', 'Destination Plate Barcode', 'Index']))==False):
+                QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                self.tabWidget.hide()
+                self.Plate.show()
+                return
         else:
             if(set(Header).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode']))==False):
                 QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                self.tabWidget.hide()
+                self.Plate.show()
                 return
         self.tabWidget.show()
         #for head in inputHeader
@@ -192,8 +200,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         sp = pd.DataFrame(sp, columns=Header)
 
         # self.model.setHeaderData(inputHeader)
-        header = inputHeader.split()
-        for i, j in enumerate(header):
+        #header = inputHeader.split()
+        for i, j in enumerate(Header):
             #print j
             self.model.setHeaderData(i, QtCore.Qt.Horizontal, QtCore.QVariant(j))
         
@@ -202,7 +210,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.Plate.hide()
         globalvar.pairlist = sp
         flag = True
-        if(globalvar.type=="gene"):
+        if(globalvar.type=="siRNA"):
             self.show_plate_rna(sp)
             #self.picking.setEnabled(True)
         else:
@@ -221,6 +229,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 if(len(match_res)==0):
                     QtGui.QMessageBox.warning(self, 'Error', 'Drug '+each_drug+' cannot be found in the source plate!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                     flag = False
+                    for item in globalvar.platetab_idx:
+                        self.tabWidget.removeTab(item)
+                        self.picking.setEnabled(False)
+                    #self.tabWidget.hide()
+                    #self.Plate.show()
                     break
             if(flag):
                 self.show_plate_drug(sp)
@@ -232,7 +245,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         
     def show_plate_rna(self, sp):
         # get the plate info
-        plate_id = set(globalvar.pairlist['plate'])
+        plate_id = set(globalvar.pairlist['Destination Plate Barcode'])
         # sort the plate id
         plate_id = sorted(plate_id)
         #print(plate_id)
@@ -252,13 +265,13 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         for i, item in enumerate(plate_id):
             # subset of the plate info
             #plate_info = sp.query('plate'=='1')
-            plate_info = sp.loc[(sp.plate == item), :]
+            plate_info = sp.loc[(sp['Destination Plate Barcode'] == item), :]
             #print(plate_info)
             for row in plate_info.index:
-                    rna1 = plate_info.at[row, 'rna1']
-                    rna2 = plate_info.at[row, 'rna2']
+                    rna1 = plate_info.at[row, 'RNA1']
+                    rna2 = plate_info.at[row, 'RNA2']
             # get the index info
-                    index_plate = plate_info.at[row, 'index']
+                    index_plate = plate_info.at[row, 'Index']
                     index_plate = int(index_plate)-1
             # devide the plate into three rows and five columns so in total 15 4*4 array
             # which row
@@ -423,7 +436,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 col_pctr = [7,15,23,7,15,23]
                 for idx_ctr, ctr in enumerate(row_pctr):
                     plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem())
-                    plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(255, 20, 147))
+                    plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(238, 99, 99))
     def cell_changed(self):
         cur_col = self.Plate.currentColumn()
         cur_row = self.Plate.currentRow()
@@ -459,24 +472,22 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         
         
     def aboutinfo(self):
-        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v1.0 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
-        #pair = globalvar.pairlist
-        #pair.columns = ["rna1", "rna2", "cell.line", "plate", "index", "type"]
-        #outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'TXT(*.txt)')
-        #print(outputFile)
-        #pair.to_csv(outputFile, sep='\t', header=True, index=False)
+        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v2.0 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
+
 
     # the main part of cherry picking
     def cherrypicking(self):
-        if(globalvar.type=="gene"):
+        if(globalvar.type=="siRNA"):
+            self.popdialog()
+            QtGui.QMessageBox.about(self, 'Notice', 'The echo file is generated by assuming the destination plate volume is 25ul')
             self.rna()
         else:
             self.drugcombo()
         
     def rna(self):
         # get the unique sRNA name
-        rna1 = set(globalvar.pairlist['rna1'])
-        rna2 = set(globalvar.pairlist['rna2'])
+        rna1 = set(globalvar.pairlist['RNA1'])
+        rna2 = set(globalvar.pairlist['RNA2'])
         rna1 = set(chain(rna1, rna2))
         rnatypes = np.zeros(shape=(len(rna1),5))
         rnatypes = pd.DataFrame(rnatypes)
@@ -523,24 +534,24 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         for cline in cline_num:
             subset_cl = globalvar.pairlist[globalvar.pairlist['cell.line']== cline]
     # get the plate info
-            plate_sub = subset_cl['plate']
+            plate_sub = subset_cl['Destination Plate Barcode']
             plate = set(plate_sub)
     #print(plate)
             for each_plate in plate:
         #idx = [j for j, x in enumerate(plate_sub) if x==each_plate]
         #subset_plate = subset_cl.iloc[idx, : ]
-                subset_plate = subset_cl[subset_cl['plate']==each_plate]
+                subset_plate = subset_cl[subset_cl['Destination Plate Barcode']==each_plate]
                 for row in subset_plate.index:
-                    rna1 = subset_plate.at[row, 'rna1']
+                    rna1 = subset_plate.at[row, 'RNA1']
             # index for the sourcewell and rnatypes
             #idx_sourcewell1 = [ii for ii, xx in enumerate(sourcewell['name']) if xx== rna1]
                     sourcewell1 = sourcewell[sourcewell['name']==rna1]
                     rnatype1 = rnatypes[rnatypes['name']==rna1]
-                    rna2 = subset_plate.at[row, 'rna2']
+                    rna2 = subset_plate.at[row, 'RNA2']
                     sourcewell2 = sourcewell[sourcewell['name']==rna2]
                     rnatype2 = rnatypes[rnatypes['name']==rna2]
             # get the index info
-                    index_plate = subset_plate.at[row, 'index']
+                    index_plate = subset_plate.at[row, 'Index']
                     index_plate = int(index_plate)-1
             # devide the plate into three rows and five columns so in total 15 4*4 array
             # which row
@@ -888,9 +899,22 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             self.summarymodel.setHeaderData(i, QtCore.Qt.Horizontal, QtCore.QVariant(j))
         #summary.columns = ['Source Plate Barcode', 'Source Well', 'Total Transfer Volume']
         
+    def popdialog(self):
+        self.dialog = MyPopupDialog()
+        self.dialog.exec_()
 
 
-
+class MyPopupDialog(QtGui.QDialog, Ui_Dialog):
+    def __init__(self, parent=None):
+        # Regular init stuff...
+        QtGui.QDialog.__init__(self, parent)
+        # Usual setup stuff
+        self.setupUi(self)
+        self.pop.accepted.connect(self.setvalues)
+    
+    def setvalues(self):
+        globalvar.concentration = self.dstv.text()
+        #print(globalvar.concentration)
 # def main(self):
 #self.show()
 

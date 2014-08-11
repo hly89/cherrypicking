@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'cherry.ui'
 #
-# Created: Mon Aug 11 11:12:40 2014
+# Created: Mon Aug 11 16:46:37 2014
 #      by: PyQt4 UI code generator 4.11
 #
 # WARNING! All changes made in this file will be lost!
@@ -141,10 +141,10 @@ class Ui_mainform(object):
         mainform.setWindowTitle(_translate("mainform", "Cherry Picking", None))
         self.Design_plate.setText(_translate("mainform", "Destination   Plate", None))
         self.Type.setText(_translate("mainform", "Type", None))
-        self.Type_choice.setItemText(0, _translate("mainform", "Gene", None))
+        self.Type_choice.setItemText(0, _translate("mainform", "siRNA", None))
         self.Type_choice.setItemText(1, _translate("mainform", "Drug", None))
         self.upload.setText(_translate("mainform", "Pair", None))
-        self.sourcePlate.setText(_translate("mainform", "Source", None))
+        self.sourcePlate.setText(_translate("mainform", "Control", None))
         item = self.Plate.verticalHeaderItem(0)
         item.setText(_translate("mainform", "A", None))
         item = self.Plate.verticalHeaderItem(1)
@@ -185,7 +185,7 @@ class Ui_mainform(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab1), _translate("mainform", "RNA pair", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab2), _translate("mainform", "Tab 2", None))
         self.picking.setText(_translate("mainform", "Picking", None))
-        self.sourcePlate_2.setText(_translate("mainform", "Source2", None))
+        self.sourcePlate_2.setText(_translate("mainform", "Source", None))
         self.about.setText(_translate("mainform", "About", None))
 
 import image_rc
