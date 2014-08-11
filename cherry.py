@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'cherry.ui'
 #
-# Created: Fri Aug 08 16:02:38 2014
+# Created: Mon Aug 11 11:12:40 2014
 #      by: PyQt4 UI code generator 4.11
 #
 # WARNING! All changes made in this file will be lost!
@@ -29,7 +29,7 @@ class Ui_mainform(object):
         mainform.setEnabled(True)
         mainform.resize(1146, 737)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(_fromUtf8("cherry.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(_fromUtf8(":/images/cherry.png")), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         mainform.setWindowIcon(icon)
         self.Design_plate = QtGui.QLabel(mainform)
         self.Design_plate.setGeometry(QtCore.QRect(580, 70, 161, 17))
@@ -129,9 +129,9 @@ class Ui_mainform(object):
         self.sourcePlate_2 = QtGui.QPushButton(mainform)
         self.sourcePlate_2.setGeometry(QtCore.QRect(810, 650, 114, 32))
         self.sourcePlate_2.setObjectName(_fromUtf8("sourcePlate_2"))
-        self.save = QtGui.QPushButton(mainform)
-        self.save.setGeometry(QtCore.QRect(970, 650, 114, 32))
-        self.save.setObjectName(_fromUtf8("save"))
+        self.about = QtGui.QPushButton(mainform)
+        self.about.setGeometry(QtCore.QRect(970, 650, 114, 32))
+        self.about.setObjectName(_fromUtf8("about"))
 
         self.retranslateUi(mainform)
         self.tabWidget.setCurrentIndex(0)
@@ -186,5 +186,6 @@ class Ui_mainform(object):
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab2), _translate("mainform", "Tab 2", None))
         self.picking.setText(_translate("mainform", "Picking", None))
         self.sourcePlate_2.setText(_translate("mainform", "Source2", None))
-        self.save.setText(_translate("mainform", "Save", None))
+        self.about.setText(_translate("mainform", "About", None))
 
+import image_rc
