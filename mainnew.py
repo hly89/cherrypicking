@@ -1,4 +1,5 @@
 from PyQt4 import QtGui, QtCore
+from PyQt4.QtCore import Qt
 import sys
 from cherry import Ui_mainform
 from pop import Ui_Dialog
@@ -14,15 +15,14 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
     def __init__(self, parent=None):
         QtGui.QMainWindow.__init__(self, parent)
         self.setupUi(self)
-        control_list = ['Positive', 'Negative']
-        gene_list = ['ARK5_5', 'ARK5_6', 'ARK5_7', 'ZAK_6']
-        self.addcomb(1, 2, control_list)  # index starts from 0!
-        self.addLineEdit(1, 3, gene_list)
+        #gene_list = ['ARK5_5', 'ARK5_6', 'ARK5_7', 'ZAK_6']
+        self.addcomb(1, 2, globalvar.control_list)  # index starts from 0!
+        self.addLineEdit(1, 3, globalvar.gene_list)
         # hiden the table view
         # self.tableView.hide()
         self.tabWidget.removeTab(1)
         self.tabWidget.hide()
-
+        self.createContextMenu() 
         
         # save the data from sourcePlate
         #sp1 = []
@@ -31,6 +31,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
 
         #signal with slot
         self.Plate.cellChanged.connect(self.cell_changed)
+        #self.Plate.cellEntered.connect(self.cell_entered)
+        self.Plate.cellDoubleClicked.connect(self.cell_entered)
         self.upload.clicked.connect(self.loadFile)
         self.sourcePlate.clicked.connect(self.loadSourcePlate)
         self.sourcePlate_2.clicked.connect(self.loadSourcePlate2)
@@ -440,18 +442,46 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
     def cell_changed(self):
         cur_col = self.Plate.currentColumn()
         cur_row = self.Plate.currentRow()
-        cur_text = self.Plate.currentItem().text()
-        tableItem = QtGui.QLineEdit()
-        tableItem.setText(str(cur_text))
-        self.Plate.setCellWidget(1, 7, tableItem)
+        #if(len(globalvar.sp2)!=0):
+            #self.addLineEdit(cur_row, cur_col, globalvar.gene_list)
+    def cell_entered(self):
+        cur_col = self.Plate.currentColumn()
+        cur_row = self.Plate.currentRow()
+        #print()
+        if(len(globalvar.sp2)!=0):
+            #list = [items for items in set(globalvar.sp2['Name'])]
+            self.addLineEdit(cur_row, cur_col, set(globalvar.sp2['Name']))
+        #cur_text = self.Plate.currentItem().text()
+        #tableItem = QtGui.QLineEdit()
+        #tableItem.setText(str(cur_text))
+        #self.Plate.setCellWidget(1, 7, tableItem)
     
     # Choosing the type of the experiments, gene or drug combo
     def type(self, items):
         # set the type to be the one chosen  by users
         globalvar.type = items
-        
-        
-        
+        if(len(globalvar.pairlist)!=0):
+            if(globalvar.type=="siRNA"):
+                if(set(globalvar.pairlist.columns).issubset(set(['RNA1', 'RNA2', 'cell.line', 'Destination Plate Barcode', 'Index']))==False):
+                    QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                    self.picking.setEnabled(False)
+                else:
+                    self.picking.setEnabled(True)
+                    #self.tabWidget.hide()
+                #self.Plate.show()
+                #return
+            else:
+                if(set(globalvar.pairlist.columns).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode']))==False):
+                    QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                    self.picking.setEnabled(False)
+                else:
+                    self.picking.setEnabled(True)
+        # disable the control button when experimental type is drug
+        if(globalvar.type=="Drug"):
+            self.sourcePlate.setEnabled(False)
+        else:
+            # when selecting siRNA, the control button is enabled
+            self.sourcePlate.setEnabled(True)
         
     def pair_changed(self):
         #cur_col = self.tableview.currentColumn()
@@ -467,12 +497,12 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         globalvar.pairlist = data
         globalvar.pairlist_change = True
         for item in globalvar.platetab_idx:
-            print(item)
+            #print(item)
             self.tabWidget.removeTab(item)
         
         
     def aboutinfo(self):
-        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v2.0 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
+        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v2.5 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
 
 
     # the main part of cherry picking
@@ -483,9 +513,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             self.rna()
         else:
             self.drugcombo()
+            #self.actionA.setEnabled(True)
         
     def rna(self):
         # get the unique sRNA name
+        #print(globalvar.sp1.ix[[4,3],'Concentration'])
         rna1 = set(globalvar.pairlist['RNA1'])
         rna2 = set(globalvar.pairlist['RNA2'])
         rna1 = set(chain(rna1, rna2))
@@ -493,6 +525,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         rnatypes = pd.DataFrame(rnatypes)
         sourcewell = rnatypes
         sourcewell = pd.DataFrame(sourcewell)
+        transfervolume = rnatypes
+        transfervolume = pd.DataFrame(transfervolume)
         for i, item in enumerate(rna1):
             #print(type(item))
             gene_symbol = list(globalvar.sp1.iloc[:,6])
@@ -503,20 +537,36 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 rnatypes.iloc[i, 1:4] = list(globalvar.sp1.iloc[idx, 11])
                 # save the plate ID
                 rnatypes.iloc[i, 4] = globalvar.sp1.iloc[1, 0]
+                transfervolume.iloc[i,4] = globalvar.sp1.iloc[1, 0]
                 sourcewell.iloc[i, 4] = globalvar.sp1.iloc[1, 0]
-                sourcewell.iloc[i, 1:4] = list(globalvar.sp1.iloc[idx, 12])
+                sourcewell.iloc[i, 1:4] = list(globalvar.sp1.ix[idx, 'Well'])
+                # the concentration in the source well
+                source_conc = list(globalvar.sp1.ix[idx, 'Concentration'])
+                # the destination volume is 250
+                # formula: v1*c1=v2*c2
+                for each_gene in range(1,4):
+                    transfervolume.iloc[i,each_gene] = globalvar.concentration/2*250/float(source_conc[each_gene-1])
             elif(item in gene_symbol2):
                 idx = [j for j, x in enumerate(gene_symbol2) if x==item]
                 #print(idx)
                 rnatypes.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 11])
                 # save the plate ID
                 rnatypes.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
+                transfervolume.iloc[i,4] = globalvar.sp2.iloc[1, 0]
                 sourcewell.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
-                sourcewell.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 12])
+                sourcewell.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Well'])
+                # the concentration in the source well
+                source_conc = list(globalvar.sp2.ix[idx, 'Concentration'])
+                # the destination volume is 250
+                # formula: v1*c1=v2*c2
+                for each_gene in range(1,4):
+                    transfervolume.iloc[i,each_gene] = globalvar.concentration/2*250/float(source_conc[each_gene-1])
         rnatypes.iloc[:, 0] = list(rna1)
         sourcewell.iloc[:, 0] = list(rna1)
+        transfervolume.iloc[:, 0] = list(rna1)
         rnatypes.columns = ['name', 'siRNA1', 'siRNA2', 'siRNA3', 'sourceplate']
         sourcewell.columns = ['name', 'w1', 'w2', 'w3', 'sourceplate']
+        transfervolume.columns = ['name', 'tv1', 'tv2', 'tv3', 'sourceplate']
         #print(sourcewell)
         cell_line = globalvar.pairlist['cell.line']
         cline_num = set(cell_line)
@@ -526,11 +576,6 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
 
         # the echo file
         echo = []
-        # transfer volumn info
-        vol = [[80]*4]*4 
-        vol = pd.DataFrame(vol)
-        vol.iloc[0,:] = 160
-        vol.iloc[:,0] = 160
         for cline in cline_num:
             subset_cl = globalvar.pairlist[globalvar.pairlist['cell.line']== cline]
     # get the plate info
@@ -547,72 +592,82 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             #idx_sourcewell1 = [ii for ii, xx in enumerate(sourcewell['name']) if xx== rna1]
                     sourcewell1 = sourcewell[sourcewell['name']==rna1]
                     rnatype1 = rnatypes[rnatypes['name']==rna1]
+                    tv1 = transfervolume[transfervolume['name']==rna1]
                     rna2 = subset_plate.at[row, 'RNA2']
                     sourcewell2 = sourcewell[sourcewell['name']==rna2]
                     rnatype2 = rnatypes[rnatypes['name']==rna2]
+                    tv2 = transfervolume[transfervolume['name']==rna2]
             # get the index info
                     index_plate = subset_plate.at[row, 'Index']
                     index_plate = int(index_plate)-1
             # devide the plate into three rows and five columns so in total 15 4*4 array
             # which row
                     if(index_plate/5==0):
-                        vol.index = row_dp[0:4]
+                        vol_index = row_dp[0:4]
                     elif(index_plate/5==1):
-                        vol.index = row_dp[4:8]
+                        vol_index = row_dp[4:8]
                     else:
-                        vol.index = row_dp[8:13]
+                        vol_index = row_dp[8:13]
                 
             # which column
                     if(index_plate%5==0):
-                        vol.columns = col_dp[0:4]
+                        vol_columns = col_dp[0:4]
                     elif(index_plate%5==1):
-                        vol.columns = col_dp[4:8]
+                        vol_columns = col_dp[4:8]
                     elif(index_plate%5==2):
-                        vol.columns = col_dp[8:12]
+                        vol_columns = col_dp[8:12]
                     elif(index_plate%5==3):
-                        vol.columns = col_dp[12:16]
+                        vol_columns = col_dp[12:16]
                     else:
-                        vol.columns = col_dp[16:20]
+                        vol_columns = col_dp[16:20]
                 
             # for the first siRNA
-                    vol1 = vol.iloc[:,1:4]
+                    #vol1 = vol.iloc[:,1:4]
+                    #print(rnatype1)
                     for row_idx in range(0,4):
-                        for col_idx in range(0,3):
+                        for col_idx in range(1,4):
                             echo_row = []
                     # rna name
                             echo_row.append(rna1)
                     # rna type
-                            echo_row.append(rnatype1.iloc[0, col_idx+1])
+                            echo_row.append(rnatype1.iloc[0, col_idx])
+                            #print(rnatype1.iloc[0, col_idx])
                     # rna source well
-                            echo_row.append(sourcewell1.iloc[0, col_idx+1])
+                            echo_row.append(sourcewell1.iloc[0, col_idx])
                     # rna source plate id
                             echo_row.append(sourcewell1.iloc[0, 4])
                     # rna vol
-                            echo_row.append(vol1.iloc[row_idx, col_idx])
+                            if(row_idx==0): # single rna
+                                echo_row.append(float(tv1.iloc[0, col_idx])*2)
+                            else:
+                                echo_row.append(tv1.iloc[0, col_idx])
                     # destination well
-                            echo_row.append(vol1.index[row_idx]+str(vol1.columns[col_idx]))
+                            echo_row.append(vol_index[row_idx]+str(vol_columns[col_idx]))
                             # plate index
                             echo_row.append('MDA231_'+str(each_plate)+'_siRNAcombo')
                             echo.append(echo_row)
             
             # for the second siRNA
-                    vol2 = (vol.iloc[1:4, :]).transpose()
+                    #vol2 = (vol.iloc[1:4, :]).transpose()
             
                     for row_idx in range(0,4):
-                        for col_idx in range(0,3):
+                        for col_idx in range(1,4):
                             echo_row = []
                     # rna name
                             echo_row.append(rna2)
                     # rna type
-                            echo_row.append(rnatype2.iloc[0, col_idx+1])
+                            echo_row.append(rnatype2.iloc[0, col_idx])
                     # rna source well
-                            echo_row.append(sourcewell2.iloc[0, col_idx+1])
+                            echo_row.append(sourcewell2.iloc[0, col_idx])
                     # rna source plate id
                             echo_row.append(sourcewell2.iloc[0, 4])
                     # rna vol
-                            echo_row.append(vol2.iloc[row_idx, col_idx])
+                            if(row_idx==0):
+                                echo_row.append(float(tv2.iloc[0, col_idx])*2)
+                            else:
+                                echo_row.append(tv2.iloc[0, col_idx])
                     # destination well
-                            echo_row.append(str(vol2.columns[col_idx])+str(vol2.index[row_idx]))
+                            echo_row.append(str(vol_index[col_idx])+str(vol_columns[row_idx]))
                             # plate index
                             echo_row.append('MDA231_'+str(each_plate)+'_siRNAcombo')
                             echo.append(echo_row)
@@ -891,9 +946,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 ]
                 #print(rowItem)
                 self.summarymodel.appendRow(rowItem)
-                #summary.append(summary_row)
+                summary.append(summary_row)
         #summary = pd.DataFrame(summary)
         header = ['Source Plate Barcode', 'Source Well', 'Total Transfer Volume']
+        summary = pd.DataFrame(summary, columns=header)
+        globalvar.summary_sw = summary
         for i, j in enumerate(header):
             #print j
             self.summarymodel.setHeaderData(i, QtCore.Qt.Horizontal, QtCore.QVariant(j))
@@ -902,6 +959,39 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
     def popdialog(self):
         self.dialog = MyPopupDialog()
         self.dialog.exec_()
+    
+    # define function to save files by right click
+    def createContextMenu(self):
+        self.setContextMenuPolicy(Qt.CustomContextMenu)  
+        self.customContextMenuRequested.connect(self.showContextMenu)  
+
+        self.contextMenu = QtGui.QMenu(self)  
+        self.actionA = self.contextMenu.addAction('save')
+        self.actionB = self.contextMenu.addAction('add control')
+
+        self.actionA.triggered.connect(self.actionHandler)
+        self.actionB.triggered.connect(self.addcontr)
+        self.actionA.setEnabled(False)
+  
+    def showContextMenu(self, pos):  
+        self.contextMenu.move(self.pos() + pos)
+        tab_idx = self.tabWidget.currentIndex() 
+        tab_name = self.tabWidget.tabText(tab_idx)
+        if(tab_name=='Info'):
+            self.actionA.setEnabled(True)
+        self.contextMenu.show()  
+  
+  
+    def actionHandler(self): 
+        outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
+        globalvar.summary_sw.to_csv(outputFile, sep=',', header=True, index=False)
+        #print(tab_name)  
+    
+    # add controls on the designed plate
+    def addcontr(self):
+        cur_col = self.Plate.currentColumn()
+        cur_row = self.Plate.currentRow()
+        self.addcomb(cur_row, cur_col, globalvar.control_list)
 
 
 class MyPopupDialog(QtGui.QDialog, Ui_Dialog):
@@ -911,10 +1001,13 @@ class MyPopupDialog(QtGui.QDialog, Ui_Dialog):
         # Usual setup stuff
         self.setupUi(self)
         self.pop.accepted.connect(self.setvalues)
+        self.pop.rejected.connect(self.novalues)
     
     def setvalues(self):
-        globalvar.concentration = self.dstv.text()
-        #print(globalvar.concentration)
+        globalvar.concentration = float(self.dstv.text())
+        #print(float(globalvar.concentration))
+    def novalues(self):
+        globalvar.concentration = 0
 # def main(self):
 #self.show()
 
