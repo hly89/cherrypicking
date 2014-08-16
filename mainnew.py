@@ -42,6 +42,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         #self.tableview.dataChanged.connect(self.pair_changed)
 
     def loadSourcePlate(self):
+        # upload the control info for siRNA
         fileName = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '.')
         inputFile = open(fileName)
         #inputData = inputFile.readlines()
@@ -65,6 +66,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.upload.setEnabled(True)
         
     def loadSourcePlate2(self):
+        # upload the source plate info
         fileName = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '.')
         inputFile = open(fileName)
         #inputData = inputFile.readlines()
@@ -81,8 +83,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             row = [ string for string in item.split('\t') ]
             sp1.append(row)
         sp1 = pd.DataFrame(sp1, columns=Header)
-        #sp1['Well'] = sp1.Row+sp1.Col
-        #print(sp1.head())
+        if(globalvar.type=="siRNA"):
+            sp1['Well'] = sp1.Row+sp1.Col
         globalvar.sp2 = sp1
         self.upload.setEnabled(True)
 
@@ -242,10 +244,28 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         if(flag):
             self.picking.setEnabled(True)
 
-        
-        
-        
+
     def show_plate_rna(self, sp):
+        rna1 = set(globalvar.pairlist['RNA1'])
+        rna2 = set(globalvar.pairlist['RNA2'])
+        rna1 = set(chain(rna1, rna2))
+        rnatypes = np.zeros(shape=(len(rna1),5))
+        rnatypes = pd.DataFrame(rnatypes)
+        
+        gene_symbol = list(globalvar.sp2['NCBI gene symbol'])
+        for i, item in enumerate(rna1):
+            if(item in gene_symbol):
+                # get the index for gene_symbol==item
+                idx = [j for j, x in enumerate(gene_symbol) if x==item]
+                rnatypes.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Product Name'])
+                # save the plate ID
+                rnatypes.iloc[i, 4] = list(globalvar.sp2.ix[idx, 'Plate Id'])[0]
+            else:
+                QtGui.QMessageBox.warning(self, 'Error', 'Gene '+item+' cannot be found in the source plate!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                return
+        rnatypes.iloc[:, 0] = list(rna1)
+        rnatypes.columns = ['name', 'siRNA1', 'siRNA2', 'siRNA3', 'sourceplate']
+        globalvar.rna_type = rnatypes
         # get the plate info
         plate_id = set(globalvar.pairlist['Destination Plate Barcode'])
         # sort the plate id
@@ -298,22 +318,19 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     for rid, rowid in enumerate(rindex):
                         for cid, colid in enumerate(columns):
                             if(rid==0 and cid!=0):
-                                sirna = QtGui.QLineEdit()
-                                sirna.setText(rna1)
-                                #print(cid)
-                                plate_list[i].setCellWidget(rowid, colid, sirna)
+                                rna1_type = rnatypes[rnatypes['name']==rna1]
+                                
+                                plate_list[i].setItem(rowid, colid, QtGui.QTableWidgetItem(rna1_type.iloc[0,cid]))
+                                
                             elif(rid!=0 and cid==0):
-                                sirna = QtGui.QLineEdit()
-                                sirna.setText(rna2)
-                                plate_list[i].setCellWidget(rowid, colid, sirna)
-                            elif(rid!=0 and cid!=0):
-                                sirna = QtGui.QLineEdit()
-                                sirna.setText(rna1+";"+rna2)
-                                plate_list[i].setCellWidget(rowid, colid, sirna)
-                            #else:
+                                rna1_type = rnatypes[rnatypes['name']==rna2]
+                                
+                                plate_list[i].setItem(rowid, colid, QtGui.QTableWidgetItem(rna1_type.iloc[0,rid]))
+                            elif(rid==2 and cid==2):
                                 #sirna = QtGui.QLineEdit()
-                                #sirna.setText("control")
-                                #self.platetab2.setCellWidget(rowid, colid, sirna)
+                                #sirna.setText(rna1+";"+rna2)
+                                #plate_list[i].setCellWidget(rowid, colid, sirna)
+                                plate_list[i].setItem(rowid, colid, QtGui.QTableWidgetItem(str(index_plate+1)))
             
             
             # positive control
@@ -451,10 +468,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         if(len(globalvar.sp2)!=0):
             #list = [items for items in set(globalvar.sp2['Name'])]
             self.addLineEdit(cur_row, cur_col, set(globalvar.sp2['Name']))
-        #cur_text = self.Plate.currentItem().text()
-        #tableItem = QtGui.QLineEdit()
-        #tableItem.setText(str(cur_text))
-        #self.Plate.setCellWidget(1, 7, tableItem)
+
     
     # Choosing the type of the experiments, gene or drug combo
     def type(self, items):
@@ -517,54 +531,36 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         
     def rna(self):
         # get the unique sRNA name
-        #print(globalvar.sp1.ix[[4,3],'Concentration'])
         rna1 = set(globalvar.pairlist['RNA1'])
         rna2 = set(globalvar.pairlist['RNA2'])
         rna1 = set(chain(rna1, rna2))
-        rnatypes = np.zeros(shape=(len(rna1),5))
-        rnatypes = pd.DataFrame(rnatypes)
+        sourcewell = np.zeros(shape=(len(rna1),5))
+        #rnatypes = pd.DataFrame(rnatypes)
+        rnatypes = globalvar.rna_type
         sourcewell = rnatypes
         sourcewell = pd.DataFrame(sourcewell)
-        transfervolume = rnatypes
+        transfervolume = np.zeros(shape=(len(rna1),5))
         transfervolume = pd.DataFrame(transfervolume)
+        gene_symbol = list(globalvar.sp2['NCBI gene symbol'])
+        
         for i, item in enumerate(rna1):
-            #print(type(item))
-            gene_symbol = list(globalvar.sp1.iloc[:,6])
-            gene_symbol2 = list(globalvar.sp2.iloc[:,6])
-            if(item in gene_symbol):
-                # get the index for gene_symbol==item
-                idx = [j for j, x in enumerate(gene_symbol) if x==item]
-                rnatypes.iloc[i, 1:4] = list(globalvar.sp1.iloc[idx, 11])
-                # save the plate ID
-                rnatypes.iloc[i, 4] = globalvar.sp1.iloc[1, 0]
-                transfervolume.iloc[i,4] = globalvar.sp1.iloc[1, 0]
-                sourcewell.iloc[i, 4] = globalvar.sp1.iloc[1, 0]
-                sourcewell.iloc[i, 1:4] = list(globalvar.sp1.ix[idx, 'Well'])
-                # the concentration in the source well
-                source_conc = list(globalvar.sp1.ix[idx, 'Concentration'])
-                # the destination volume is 250
-                # formula: v1*c1=v2*c2
-                for each_gene in range(1,4):
-                    transfervolume.iloc[i,each_gene] = globalvar.concentration/2*250/float(source_conc[each_gene-1])
-            elif(item in gene_symbol2):
-                idx = [j for j, x in enumerate(gene_symbol2) if x==item]
-                #print(idx)
-                rnatypes.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 11])
-                # save the plate ID
-                rnatypes.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
-                transfervolume.iloc[i,4] = globalvar.sp2.iloc[1, 0]
-                sourcewell.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
-                sourcewell.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Well'])
-                # the concentration in the source well
-                source_conc = list(globalvar.sp2.ix[idx, 'Concentration'])
-                # the destination volume is 250
-                # formula: v1*c1=v2*c2
-                for each_gene in range(1,4):
-                    transfervolume.iloc[i,each_gene] = globalvar.concentration/2*250/float(source_conc[each_gene-1])
-        rnatypes.iloc[:, 0] = list(rna1)
+            idx = [j for j, x in enumerate(gene_symbol) if x==item]
+            #rnatypes.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 11])
+            # save the plate ID
+            #rnatypes.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
+            transfervolume.iloc[i,4] = list(globalvar.sp2.ix[idx, 'Plate Id'])[0]
+            sourcewell.iloc[i, 4] = transfervolume.iloc[i,4]
+            sourcewell.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Well'])
+            # the concentration in the source well
+            source_conc = list(globalvar.sp2.ix[idx, 'Concentration'])
+            # the destination volume is 25
+            # formula: v1*c1=v2*c2
+            for each_gene in range(1,4):
+                transfervolume.iloc[i,each_gene] = globalvar.concentration/2*25/float(source_conc[each_gene-1])
+        #rnatypes.iloc[:, 0] = list(rna1)
         sourcewell.iloc[:, 0] = list(rna1)
         transfervolume.iloc[:, 0] = list(rna1)
-        rnatypes.columns = ['name', 'siRNA1', 'siRNA2', 'siRNA3', 'sourceplate']
+        #rnatypes.columns = ['name', 'siRNA1', 'siRNA2', 'siRNA3', 'sourceplate']
         sourcewell.columns = ['name', 'w1', 'w2', 'w3', 'sourceplate']
         transfervolume.columns = ['name', 'tv1', 'tv2', 'tv3', 'sourceplate']
         #print(sourcewell)
@@ -578,10 +574,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         echo = []
         for cline in cline_num:
             subset_cl = globalvar.pairlist[globalvar.pairlist['cell.line']== cline]
-    # get the plate info
+            # get the plate info
             plate_sub = subset_cl['Destination Plate Barcode']
             plate = set(plate_sub)
-    #print(plate)
             for each_plate in plate:
         #idx = [j for j, x in enumerate(plate_sub) if x==each_plate]
         #subset_plate = subset_cl.iloc[idx, : ]
@@ -621,72 +616,73 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     else:
                         vol_columns = col_dp[16:20]
                 
-            # for the first siRNA
-                    #vol1 = vol.iloc[:,1:4]
-                    #print(rnatype1)
+                    # for the first siRNA
                     for row_idx in range(0,4):
                         for col_idx in range(1,4):
                             echo_row = []
-                    # rna name
+                            # rna name
                             echo_row.append(rna1)
-                    # rna type
+                            # rna type
                             echo_row.append(rnatype1.iloc[0, col_idx])
-                            #print(rnatype1.iloc[0, col_idx])
-                    # rna source well
-                            echo_row.append(sourcewell1.iloc[0, col_idx])
-                    # rna source plate id
+                            # destination plate index
+                            echo_row.append(str(each_plate))
+                            # destination well
+                            echo_row.append(vol_index[row_idx]+str(vol_columns[col_idx]))
+                            # rna source plate id
                             echo_row.append(sourcewell1.iloc[0, 4])
-                    # rna vol
+                            # rna source well
+                            echo_row.append(sourcewell1.iloc[0, col_idx])
+                            # rna vol
                             if(row_idx==0): # single rna
                                 echo_row.append(float(tv1.iloc[0, col_idx])*2)
                             else:
                                 echo_row.append(tv1.iloc[0, col_idx])
-                    # destination well
-                            echo_row.append(vol_index[row_idx]+str(vol_columns[col_idx]))
-                            # plate index
-                            echo_row.append('MDA231_'+str(each_plate)+'_siRNAcombo')
                             echo.append(echo_row)
             
-            # for the second siRNA
-                    #vol2 = (vol.iloc[1:4, :]).transpose()
-            
+                    # for the second siRNA
                     for row_idx in range(0,4):
                         for col_idx in range(1,4):
                             echo_row = []
-                    # rna name
+                            # rna name
                             echo_row.append(rna2)
-                    # rna type
+                            # rna type
                             echo_row.append(rnatype2.iloc[0, col_idx])
-                    # rna source well
-                            echo_row.append(sourcewell2.iloc[0, col_idx])
-                    # rna source plate id
+                            # plate index
+                            echo_row.append(str(each_plate))
+                            # destination well
+                            echo_row.append(str(vol_index[col_idx])+str(vol_columns[row_idx]))
+                            # rna source plate id
                             echo_row.append(sourcewell2.iloc[0, 4])
-                    # rna vol
+                            # rna source well
+                            echo_row.append(sourcewell2.iloc[0, col_idx])
+                            # rna vol
                             if(row_idx==0):
                                 echo_row.append(float(tv2.iloc[0, col_idx])*2)
                             else:
                                 echo_row.append(tv2.iloc[0, col_idx])
-                    # destination well
-                            echo_row.append(str(vol_index[col_idx])+str(vol_columns[row_idx]))
-                            # plate index
-                            echo_row.append('MDA231_'+str(each_plate)+'_siRNAcombo')
+                            
+                            
                             echo.append(echo_row)
-            #vol.index = row_name
-            #vol.columns = col_name
+
             
 
         echo = pd.DataFrame(echo)
-        
-        dest_barcode = ['MDA231_1_siRNAcombo', 'MDA231_2_siRNAcombo', 'MDA231_3_siRNAcombo']
-# add controls: 22 negative ctrs and 16 positive ctrs
+        echo.columns = ['RNA', 'RNAtype', 'Destination Plate Barcode', 'Destination Well', 'Source Plate Barcode', 'Source Well',  'Transfer Volume']
+        # add controls: 22 negative ctrs and 16 positive ctrs in each plate
         Ndest_well = ["B5", "B9", "B13", "B17", "B21", "C3", "C11", "C19", "F2", "F23", "G7", "G15", "I2", "I23", "K3", "K11", "K19", "O5", "O9", "O13", "O17", "O21"]
         Pdest_well = ["B3", "B12", "B22", "C7", "C15", "G3", "G11", "G19", "K7", "K15", "M2", "M23", "O7", "O11", "O15", "O19"]
-        Ncontrol = pd.DataFrame( {'RNA': ['NegCtr']*22*3, 'RNAtype': ['CTR']*22*3, 'source_well': ['F3']*22*3,'Source_Plate_Barcode': ['ctr']*22*3, 'Transfer Volume': [40]*22*3,'Destination Well': Ndest_well*3, 'Destination Plate Barcode': dest_barcode*22})
-        Pcontrol = pd.DataFrame( {'RNA': ['PosCtr']*16*3, 'RNAtype': ['CTR']*16*3, 'source_well': ['C3']*16*3,'Source_Plate_Barcode': ['ctr']*16*3, 'Transfer Volume': [40]*16*3,'Destination Well': Pdest_well*3, 'Destination Plate Barcode': dest_barcode*16})
-        control = pd.concat([Ncontrol, Pcontrol], ignore_index=True)
-        echo.columns = ['RNA', 'RNAtype', 'source_well', 'Source_Plate_Barcode', 'Transfer Volume', 'Destination Well', 'Destination Plate Barcode']
-        echo = pd.concat([echo, control], ignore_index=True)
-        echo['Source_Plate_Type'] = '384PP_AQ_BP2'
+        negctr_sp = globalvar.sp1[globalvar.sp1['NCBI.gene.symbol']=='NegCtr']
+        # transfer volume for neg ctr
+        neg_tv = globalvar.concentration*25/float(negctr_sp['Concentration'])
+        posctr_sp = globalvar.sp1[globalvar.sp1['NCBI.gene.symbol']=='PosCtr']
+        # transfer volume for pos ctr
+        pos_tv = globalvar.concentration*25/float(posctr_sp['Concentration'])
+        dest_plate = set(globalvar.pairlist['Destination Plate Barcode'])
+        for each_dp in dest_plate:
+            Ncontrol = pd.DataFrame( {'RNA': ['NegCtr']*22, 'RNAtype': ['CTR']*22, 'Destination Plate Barcode': str(each_dp)*22, 'Destination Well': Ndest_well, 'Source Plate Barcode': str(negctr_sp['Plate.Id'])*22, 'Source Well': str(negctr_sp['Well'])*22, 'Transfer Volume': neg_tv*22})
+            Pcontrol = pd.DataFrame( {'RNA': ['PosCtr']*16, 'RNAtype': ['CTR']*16, 'Destination Plate Barcode': str(each_dp)*16, 'Destination Well': Pdest_well, 'Source Plate Barcode': str(posctr_sp['Plate.Id'])*16, 'Source Well': str(posctr_sp['Well'])*22, 'Transfer Volume': pos_tv*16})
+            control = pd.concat([Ncontrol, Pcontrol], ignore_index=True)
+            echo = pd.concat([echo, control], ignore_index=True)
 
 #writer = pd.ExcelWriter('output.xlsx')
 #echo.to_excel(writer, 'Sheet1')
@@ -832,7 +828,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             dw = ['A1', 'A9', 'A17', 'I1', 'I9', 'I17']
             dw_r = ['A', 'A', 'A', 'I', 'I', 'I']
             dw_c = ['1', '9', '17', '1', '9', '17']
-            drug_sp = globalvar.sp2[globalvar.sp2['Supplier Ref']=='dmso']
+            drug_sp = globalvar.sp2[globalvar.sp2['Name']=='DMSO']
             neg_idx = drug_sp.index
             len_neg = len(drug_sp['SrcWell'])
             len_dw = len(dw)
@@ -874,7 +870,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             dw = ['H8', 'H16', 'H24', 'P8', 'P16', 'P24']
             dw_r = ['H', 'H', 'H', 'P', 'P', 'P']
             dw_c = ['8', '16', '24', '8', '16', '24']
-            drug_sp = globalvar.sp2[globalvar.sp2['Supplier Ref']=='BzCl']
+            drug_sp = globalvar.sp2[globalvar.sp2['Name']=='BzCl']
             neg_idx = drug_sp.index
             len_neg = len(drug_sp['SrcWell'])
             len_dw = len(dw)
