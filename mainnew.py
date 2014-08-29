@@ -1,6 +1,6 @@
 from PyQt4 import QtGui, QtCore
 from PyQt4.QtCore import Qt
-import sys
+import sys, csv
 from cherry import Ui_mainform
 from pop import Ui_Dialog
 from LineEdit import LineEdit
@@ -60,6 +60,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             #print(row)
             sp1.append(row)
         sp1 = pd.DataFrame(sp1, columns=Header)
+        for idx_col, each_col in enumerate(sp1.Col):
+                if(len(each_col)<2):
+                    sp1.ix[idx_col, 'Col'] = each_col.zfill(2)
         sp1['Well'] = sp1.Row+sp1.Col
         #print(sp1.head())
         globalvar.sp1 = sp1
@@ -83,7 +86,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             row = [ string for string in item.split('\t') ]
             sp1.append(row)
         sp1 = pd.DataFrame(sp1, columns=Header)
+        #leading_zero = lambda n, cnt=2: "%0*d" % (cnt, n)
         if(globalvar.type=="siRNA"):
+            for idx_col, each_col in enumerate(sp1.Col):
+                if(len(each_col)<2):
+                    sp1.ix[idx_col, 'Col'] = each_col.zfill(2)
             sp1['Well'] = sp1.Row+sp1.Col
         globalvar.sp2 = sp1
         self.upload.setEnabled(True)
@@ -106,7 +113,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         comb = QtGui.QComboBox()
         comb.addItems(items)
         self.Plate.setCellWidget(row, col, comb)
-    def tabs(self, name):
+    def tabs(self, name): # tab with a table
         self.tab2 = QtGui.QWidget()
         #self.tab3.setObjectName(name)
         #self.platetab3 = QtGui.QTableWidget(self.tab3)
@@ -158,6 +165,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.platetab2.horizontalHeader().setMinimumSectionSize(30)
         self.platetab2.verticalHeader().setDefaultSectionSize(30)
         return self.platetab2
+
 
     def loadFile(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self, 'Open File', '.')
@@ -216,6 +224,24 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         flag = True
         if(globalvar.type=="siRNA"):
             self.show_plate_rna(sp)
+            rna1 = sp['RNA1']
+            rna2 = sp['RNA2']
+            rna = set(chain(rna1, rna2))
+            for each_rna in rna:
+                match_res = globalvar.sp2[globalvar.sp2['NCBI gene symbol']==each_rna].index
+                if(len(match_res)==0):
+                    QtGui.QMessageBox.warning(self, 'Error', 'RNA '+each_rna+' cannot be found in the source plate!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+                    flag = False
+                    for item in globalvar.platetab_idx:
+                        self.tabWidget.removeTab(1)
+                    self.picking.setEnabled(False)
+                    #self.tabWidget.hide()
+                    for each_tab in globalvar.info_tab:
+                        self.tabWidget.removeTab(1)
+                    #self.Plate.show()
+                    break
+                if(flag):
+                    self.show_plate_rna(sp)
             #self.picking.setEnabled(True)
         else:
             self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab1), "Drug Pair")
@@ -234,11 +260,13 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     QtGui.QMessageBox.warning(self, 'Error', 'Drug '+each_drug+' cannot be found in the source plate!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                     flag = False
                     for item in globalvar.platetab_idx:
-                        self.tabWidget.removeTab(item)
-                        self.picking.setEnabled(False)
+                        self.tabWidget.removeTab(1)
+                    self.picking.setEnabled(False)
                     #self.tabWidget.hide()
+                    for each_tab in globalvar.info_tab:
+                        self.tabWidget.removeTab(1)
                     #self.Plate.show()
-                    break
+                    return
             if(flag):
                 self.show_plate_drug(sp)
         if(flag):
@@ -246,6 +274,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
 
 
     def show_plate_rna(self, sp):
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab1), "RNA pair")
         rna1 = set(globalvar.pairlist['RNA1'])
         rna2 = set(globalvar.pairlist['RNA2'])
         rna1 = set(chain(rna1, rna2))
@@ -277,13 +306,14 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         
         for item in globalvar.platetab_idx:
             #print(item)
-            self.tabWidget.removeTab(item)
-            
+            self.tabWidget.removeTab(1)
+        for each_tab in globalvar.info_tab:
+            self.tabWidget.removeTab(1)
         plate_list = {}
         for i, item in enumerate(plate_id):
             
             plate_list[i] = self.tabs("Plate"+str(i+1))
-            globalvar.platetab_idx.append(self.tabWidget.currentIndex()+1)
+            globalvar.platetab_idx.append(self.tabWidget.currentIndex()+i+1)
         for i, item in enumerate(plate_id):
             # subset of the plate info
             #plate_info = sp.query('plate'=='1')
@@ -338,16 +368,16 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             col_pctr = [2,11,21,6,14,2,10,18,6,14,1,22,6,10,14,18]
             # add color the control position 
             for idx_ctr, ctr in enumerate(row_pctr):
-                plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem())
+                plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem('Pos_Ctr'))
                 plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(0,0,0))
         
             # negative control
             row_pctr = [1,1,1,1,1,2,2,2,5,5,6,6,8,8,10,10,10,14,14,14,14,14]
             col_pctr = [4,8,12,16,20,2,10,18,1,22,6,14,1,22,2,10,18,4,8,12,16,20]
             for idx_ctr, ctr in enumerate(row_pctr):
-                plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem())
+                plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem('Neg_Ctr'))
                 plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(128,128,128))
-                
+        globalvar.plate = plate_list
                 
     def show_plate_drug(self, sp):
         # get the plate info
@@ -360,8 +390,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         col_dp = range(0,24)
             
         for item in globalvar.platetab_idx:
-            #print(item)
-            self.tabWidget.removeTab(item)
+            self.tabWidget.removeTab(1)
+        for each_tab in globalvar.info_tab:
+            self.tabWidget.removeTab(1)
 
         plate_list = {}
         for i, item in enumerate(plate_id):
@@ -513,23 +544,33 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         for item in globalvar.platetab_idx:
             #print(item)
             self.tabWidget.removeTab(item)
-        
+        for each_tab in globalvar.info_tab:
+            self.tabWidget.removeTab(each_tab)
         
     def aboutinfo(self):
-        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v2.5 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
+        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v3.2 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
 
 
     # the main part of cherry picking
     def cherrypicking(self):
         if(globalvar.type=="siRNA"):
             self.popdialog()
-            QtGui.QMessageBox.about(self, 'Notice', 'The echo file is generated by assuming the destination plate volume is 25ul')
+            #QtGui.QMessageBox.about(self, 'Notice', 'The echo file is generated by assuming the destination plate volume is 25ul')
             self.rna()
         else:
             self.drugcombo()
             #self.actionA.setEnabled(True)
         
     def rna(self):
+        if(globalvar.concentration==0):
+            return
+        # get the destination plate number
+        dp_num = len(set(globalvar.pairlist['Destination Plate Barcode']))
+        tab_num = len(globalvar.info_tab)
+        if(tab_num!=0):
+            for each_tab in globalvar.info_tab:
+                self.tabWidget.removeTab(dp_num+1)
+            #globalvar.platetab_idx.pop()
         # get the unique sRNA name
         rna1 = set(globalvar.pairlist['RNA1'])
         rna2 = set(globalvar.pairlist['RNA2'])
@@ -537,12 +578,13 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         sourcewell = np.zeros(shape=(len(rna1),5))
         #rnatypes = pd.DataFrame(rnatypes)
         rnatypes = globalvar.rna_type
-        sourcewell = rnatypes
+        #sourcewell = rnatypes
         sourcewell = pd.DataFrame(sourcewell)
         transfervolume = np.zeros(shape=(len(rna1),5))
         transfervolume = pd.DataFrame(transfervolume)
         gene_symbol = list(globalvar.sp2['NCBI gene symbol'])
-        
+        # add leading zero when number is less than 10
+        leading_zero = lambda n, cnt=2: "%0*d" % (cnt, n)
         for i, item in enumerate(rna1):
             idx = [j for j, x in enumerate(gene_symbol) if x==item]
             #rnatypes.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 11])
@@ -556,7 +598,10 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             # the destination volume is 25
             # formula: v1*c1=v2*c2
             for each_gene in range(1,4):
-                transfervolume.iloc[i,each_gene] = globalvar.concentration/2*25/float(source_conc[each_gene-1])
+                transfervolume.iloc[i,each_gene] = globalvar.concentration/2*25/float(source_conc[each_gene-1])*1000
+                if(transfervolume.iloc[i,each_gene]%2.5!=0):
+                    QtGui.QMessageBox.warning(self, 'Error', 'The transfer volume is not correct please check the source plate files!', QtGui.QMessageBox.Yes)
+                    return
         #rnatypes.iloc[:, 0] = list(rna1)
         sourcewell.iloc[:, 0] = list(rna1)
         transfervolume.iloc[:, 0] = list(rna1)
@@ -627,6 +672,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             # destination plate index
                             echo_row.append(str(each_plate))
                             # destination well
+                            if(vol_columns[col_idx]<10):
+                                vol_columns[col_idx] = leading_zero(vol_columns[col_idx])
                             echo_row.append(vol_index[row_idx]+str(vol_columns[col_idx]))
                             # rna source plate id
                             echo_row.append(sourcewell1.iloc[0, 4])
@@ -650,6 +697,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             # plate index
                             echo_row.append(str(each_plate))
                             # destination well
+                            if(vol_columns[row_idx]<10):
+                                vol_columns[row_idx] = leading_zero(vol_columns[row_idx])
                             echo_row.append(str(vol_index[col_idx])+str(vol_columns[row_idx]))
                             # rna source plate id
                             echo_row.append(sourcewell2.iloc[0, 4])
@@ -663,39 +712,114 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             
                             
                             echo.append(echo_row)
+                
 
             
 
         echo = pd.DataFrame(echo)
         echo.columns = ['RNA', 'RNAtype', 'Destination Plate Barcode', 'Destination Well', 'Source Plate Barcode', 'Source Well',  'Transfer Volume']
         # add controls: 22 negative ctrs and 16 positive ctrs in each plate
-        Ndest_well = ["B5", "B9", "B13", "B17", "B21", "C3", "C11", "C19", "F2", "F23", "G7", "G15", "I2", "I23", "K3", "K11", "K19", "O5", "O9", "O13", "O17", "O21"]
-        Pdest_well = ["B3", "B12", "B22", "C7", "C15", "G3", "G11", "G19", "K7", "K15", "M2", "M23", "O7", "O11", "O15", "O19"]
-        negctr_sp = globalvar.sp1[globalvar.sp1['NCBI.gene.symbol']=='NegCtr']
+        Ndest_well = ["B05", "B09", "B13", "B17", "B21", "C03", "C11", "C19", "F02", "F23", "G07", "G15", "I02", "I23", "K03", "K11", "K19", "O05", "O09", "O13", "O17", "O21"]
+        Pdest_well = ["B03", "B12", "B22", "C07", "C15", "G03", "G11", "G19", "K07", "K15", "M02", "M23", "O07", "O11", "O15", "O19"]
+        negctr_sp = globalvar.sp1[globalvar.sp1['Type']=='NegCtr']
         # transfer volume for neg ctr
-        neg_tv = globalvar.concentration*25/float(negctr_sp['Concentration'])
-        posctr_sp = globalvar.sp1[globalvar.sp1['NCBI.gene.symbol']=='PosCtr']
+        neg_tv = globalvar.concentration*25/float(negctr_sp['Concentration'])*1000
+        if(neg_tv%2.5!=0):
+                    QtGui.QMessageBox.warning(self, 'Error', 'The transfer volume is not correct please check the control information files!', QtGui.QMessageBox.Yes)
+                    return
+        posctr_sp = globalvar.sp1[globalvar.sp1['Type']=='PosCtr']
         # transfer volume for pos ctr
-        pos_tv = globalvar.concentration*25/float(posctr_sp['Concentration'])
+        pos_tv = globalvar.concentration*25/float(posctr_sp['Concentration'])*1000
+        if(pos_tv%2.5!=0):
+                    QtGui.QMessageBox.warning(self, 'Error', 'The transfer volume is not correct please check the control information files!', QtGui.QMessageBox.Yes)
+                    return
         dest_plate = set(globalvar.pairlist['Destination Plate Barcode'])
         for each_dp in dest_plate:
-            Ncontrol = pd.DataFrame( {'RNA': ['NegCtr']*22, 'RNAtype': ['CTR']*22, 'Destination Plate Barcode': str(each_dp)*22, 'Destination Well': Ndest_well, 'Source Plate Barcode': str(negctr_sp['Plate.Id'])*22, 'Source Well': str(negctr_sp['Well'])*22, 'Transfer Volume': neg_tv*22})
-            Pcontrol = pd.DataFrame( {'RNA': ['PosCtr']*16, 'RNAtype': ['CTR']*16, 'Destination Plate Barcode': str(each_dp)*16, 'Destination Well': Pdest_well, 'Source Plate Barcode': str(posctr_sp['Plate.Id'])*16, 'Source Well': str(posctr_sp['Well'])*22, 'Transfer Volume': pos_tv*16})
+            Ncontrol = pd.DataFrame( {'RNA': ['NegCtr']*22, 'RNAtype': ['CTR']*22, 'Destination Plate Barcode': [str(each_dp)]*22, 'Destination Well': Ndest_well, 'Source Plate Barcode': list(negctr_sp['Plate.Id'])*22, 'Source Well': list(negctr_sp['Well'])*22, 'Transfer Volume': [neg_tv]*22})
+            Pcontrol = pd.DataFrame( {'RNA': ['PosCtr']*16, 'RNAtype': ['CTR']*16, 'Destination Plate Barcode': [str(each_dp)]*16, 'Destination Well': Pdest_well, 'Source Plate Barcode': list(posctr_sp['Plate.Id'])*16, 'Source Well': list(posctr_sp['Well'])*16, 'Transfer Volume': [pos_tv]*16})
             control = pd.concat([Ncontrol, Pcontrol], ignore_index=True)
             echo = pd.concat([echo, control], ignore_index=True)
-
+            
 #writer = pd.ExcelWriter('output.xlsx')
 #echo.to_excel(writer, 'Sheet1')
+        #############
+        # change the order of the columns
+        echo = echo[['RNA', 'RNAtype', 'Source Plate Barcode', 'Source Well', 'Destination Plate Barcode', 'Destination Well', 'Transfer Volume']]
+        echo = echo.sort(['Source Plate Barcode', 'Source Well', 'Destination Plate Barcode', 'Destination Well'],ascending=[True, True, True, True])
         outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
         #print(outputFile)
         echo.to_csv(outputFile, sep=',', header=True, index=False)
-        #print(echo)
+        ################################
+        # summary the information
+        ################################
+        # find the unique source well in the echo file
+        self.summary_tab = QtGui.QWidget()
+        self.tabWidget.addTab(self.summary_tab, "Info")
+        #globalvar.platetab_idx.append(self.tabWidget.currentIndex()+1)
+        #print(self.tabWidget.currentIndex())
+        globalvar.info_tab.append(self.tabWidget.currentIndex())
+        #self.summaryview = QtGui.QTableView(self.tab1)
+        self.summaryview = QtGui.QTableView(self.summary_tab)
+        self.summaryview.setGeometry(QtCore.QRect(0, 0, 1101, 481))
+        self.summarymodel = QtGui.QStandardItemModel(self)
+        self.summaryview.setModel(self.summarymodel)
+        summary = []
+        sw_echo = set(echo['Source Well'])
+        for each_sw in sw_echo:
+            # find all the source well=each_sw in echo file
+            temp_echo = echo[echo['Source Well']==each_sw]
+            # get the source plate info
+            swp_echo = set(temp_echo['Source Plate Barcode'])
+            for each_swp in swp_echo:
+                sub_echo = temp_echo[temp_echo['Source Plate Barcode']==each_swp]
+                summary_row = []
+                
+                # source plate 
+                summary_row.append(each_swp)
+                # source well info
+                summary_row.append(each_sw)
+                # sum of the transfer volume
+                summary_row.append(str(sub_echo['Transfer Volume'].sum()))
+                rowItem = [
+                QtGui.QStandardItem(string)
+                for string in summary_row
+                ]
+                #print(rowItem)
+                self.summarymodel.appendRow(rowItem)
+                summary.append(summary_row)
+        #summary = pd.DataFrame(summary)
+        header = ['Source Plate Barcode', 'Source Well', 'Total Transfer Volume']
+        summary = pd.DataFrame(summary, columns=header)
+        globalvar.summary_sw = summary
+        for i, j in enumerate(header):
+            #print j
+            self.summarymodel.setHeaderData(i, QtCore.Qt.Horizontal, QtCore.QVariant(j))
 #writer.save()
         
+    def save_rna_layout(self, plate):
+        outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
+        if not outputFile.isEmpty():
+            with open(unicode(outputFile), 'wb') as stream:
+                writer = csv.writer(stream)
+                for row in range(plate.rowCount()):
+                    rowdata = []
+                    for column in range(plate.columnCount()):
+                        item = plate.item(row, column)
+                        if item is not None:
+                            rowdata.append(
+                                unicode(item.text()).encode('utf8'))
+                        else:
+                            rowdata.append('')
+                    writer.writerow(rowdata)
     def drugcombo(self):
+        tab_num = len(globalvar.info_tab)
+        if(tab_num!=0):
+            self.tabWidget.removeTab(globalvar.info_tab)
         dst_dilution = [['D', 'C', 'B', 'B', 'B', 'A', 'A'], ['D', 'D', 'D', 'C', 'B', 'B', 'B']]
         # the transfer volume for different dilutions
         transfer_v = [[25, 7.5, 2.5, 7.5, 25, 7.5, 25], [2.5, 7.5, 25, 7.5, 2.5, 7.5, 25]]
+        # the destination concentration for different ranges
+        dst_conc = [[10, 30, 100, 300, 1000, 3000, 10000], [1, 3, 10, 30, 100, 300, 1000]]
         # designed plate info
         row_dp = map(chr, range(63, 91))[2:18]
         col_dp = range(1,25)
@@ -739,10 +863,12 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     #drug1_conc = dst_conc[0]
                     drug1_dilution = dst_dilution[0]
                     drug1_transfer = transfer_v[0]
+                    drug1_dst_conc = dst_conc[0]
                 else:
                     #drug1_conc = dst_conc[1]
                     drug1_dilution = dst_dilution[1]
                     drug1_transfer = transfer_v[1]
+                    drug1_dst_conc = dst_conc[1]
         
                 for row_idx in range(0,8):
                     dilution_id = 0
@@ -754,6 +880,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             drug_id = int(drug_sp[drug_sp['Dilution']==drug1_dilution[dilution_id]].index)
                             # drug1 name
                             echo_row.append(drug1)
+                            # drug1 destination concentration
+                            echo_row.append(drug1_dst_conc[col_idx-1])
                             # drug1 source well
                             echo_row.append(drug_sp.at[drug_id, 'SrcWell'])
                             # drug1 source well Row
@@ -786,9 +914,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 if(range_info=='H'):
                     drug2_dilution = dst_dilution[0]
                     drug2_transfer = transfer_v[0]
+                    drug2_dst_conc = dst_conc[0]
                 else:
                     drug2_dilution = dst_dilution[1]
                     drug2_transfer = transfer_v[1]
+                    drug2_dst_conc = dst_conc[1]
         
                 for row_idx in range(0,8):
                     dilution_id = 0
@@ -799,6 +929,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             drug_id = int(drug_sp[drug_sp['Dilution']==drug2_dilution[dilution_id]].index)
                             # drug2 name
                             echo_row.append(drug2)
+                            # drug1 destination concentration
+                            echo_row.append(drug2_dst_conc[col_idx-1])
                             # drug2 source well
                             echo_row.append(drug_sp.at[drug_id, 'SrcWell'])
                             # drug2 source well Row
@@ -841,6 +973,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 ctr_idx = neg_idx[id_ctr[neg_id]]
                 # drug2 name
                 echo_row.append('dmso')
+                # dst conc
+                echo_row.append(0)
                 # drug2 source well
                 echo_row.append(drug_sp.at[ctr_idx, 'SrcWell'])
                 # drug2 source well Row
@@ -883,6 +1017,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 ctr_idx = neg_idx[id_ctr[neg_id]]
                 # drug2 name
                 echo_row.append('BzCl')
+                # dst conc
+                echo_row.append(100)
                 # drug2 source well
                 echo_row.append(drug_sp.at[ctr_idx, 'SrcWell'])
                 # drug2 source well Row
@@ -907,15 +1043,22 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     echo_row.append("384PP_AQ_BP2")
                 echo.append(echo_row)
         echo = pd.DataFrame(echo)
-        echo.columns = ['Drug', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Source Plate Type']
+        echo.columns = ['Drug', 'Destination Concentration', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Source Plate Type']
+        # sort the data
+        echo[['SCol','DCol']] = echo[['SCol', 'DCol']].astype(float)
+        echo = echo.sort(['Source Plate Barcode', 'Destination Plate Barcode', 'SCol', 'SRow', 'DCol', 'DRow'],ascending=[True, True, True, True, True, True])
         outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
         echo.to_csv(outputFile, sep=',', header=True, index=False)
         ################################
         # summary the information
         ################################
         # find the unique source well in the echo file
-        summary_tab = self.tabs("Info")
-        self.summaryview = QtGui.QTableView(summary_tab)
+        self.summary_tab = QtGui.QWidget()
+        self.tabWidget.addTab(self.summary_tab, "Info")
+        #self.summaryview = QtGui.QTableView(self.tab1)
+        #globalvar.platetab_idx.append(self.tabWidget.currentIndex()+1)
+        globalvar.info_tab.append(self.tabWidget.currentIndex()+1)
+        self.summaryview = QtGui.QTableView(self.summary_tab)
         self.summaryview.setGeometry(QtCore.QRect(0, 0, 1101, 481))
         self.summarymodel = QtGui.QStandardItemModel(self)
         self.summaryview.setModel(self.summarymodel)
@@ -926,16 +1069,33 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             temp_echo = echo[echo['Source Well']==each_sw]
             # get the source plate info
             swp_echo = set(temp_echo['Source Plate Barcode'])
+            
             for each_swp in swp_echo:
                 sub_echo = temp_echo[temp_echo['Source Plate Barcode']==each_swp]
+
+                # from source plate info get all data where 'Source Plate Barcode' == each_swp
+                spi = globalvar.sp2[globalvar.sp2['Source Plate']==each_swp]
+                spi = spi[spi['SrcWell']==each_sw]
+                dilution_info = spi['Dilution']
                 summary_row = []
-                
+                # source plate name
+                if((dilution_info=='A').bool()):
+                    summary_row.append("source[1]")
+                elif((dilution_info=='B').bool()):
+                    summary_row.append("source[2]")
+                elif((dilution_info=='C').bool()):
+                    summary_row.append("source[3]")
+                elif((dilution_info=='D').bool()):
+                    summary_row.append("source[4]")
+                else:
+                    summary_row.append("source[5]")
                 # source plate 
                 summary_row.append(each_swp)
                 # source well info
                 summary_row.append(each_sw)
                 # sum of the transfer volume
                 summary_row.append(str(sub_echo['Transfer Volume'].sum()))
+                # get the source plate name according to the dilution info
                 rowItem = [
                 QtGui.QStandardItem(string)
                 for string in summary_row
@@ -944,7 +1104,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 self.summarymodel.appendRow(rowItem)
                 summary.append(summary_row)
         #summary = pd.DataFrame(summary)
-        header = ['Source Plate Barcode', 'Source Well', 'Total Transfer Volume']
+        header = ['Source Plate Name', 'Source Plate Barcode', 'Source Well', 'Total Transfer Volume']
         summary = pd.DataFrame(summary, columns=header)
         globalvar.summary_sw = summary
         for i, j in enumerate(header):
@@ -973,14 +1133,21 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.contextMenu.move(self.pos() + pos)
         tab_idx = self.tabWidget.currentIndex() 
         tab_name = self.tabWidget.tabText(tab_idx)
-        if(tab_name=='Info'):
+        if(tab_name=='Info' or "Plate" in tab_name):
             self.actionA.setEnabled(True)
+        else:
+            self.actionA.setEnabled(False)
         self.contextMenu.show()  
   
   
     def actionHandler(self): 
-        outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
-        globalvar.summary_sw.to_csv(outputFile, sep=',', header=True, index=False)
+        tab_idx = self.tabWidget.currentIndex() 
+        tab_name = self.tabWidget.tabText(tab_idx)
+        if(tab_name =='Info'):
+            outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
+            globalvar.summary_sw.to_csv(outputFile, sep=',', header=True, index=False)
+        else:
+            self.save_rna_layout(globalvar.plate[tab_idx-1])
         #print(tab_name)  
     
     # add controls on the designed plate
@@ -997,10 +1164,16 @@ class MyPopupDialog(QtGui.QDialog, Ui_Dialog):
         # Usual setup stuff
         self.setupUi(self)
         self.pop.accepted.connect(self.setvalues)
+        #if(globalvar.concentration==0)
         self.pop.rejected.connect(self.novalues)
     
     def setvalues(self):
-        globalvar.concentration = float(self.dstv.text())
+        if(len(self.dstv.text())==0):
+            QtGui.QMessageBox.warning(self, 'Error', 'Please specify the total destination volume per well!', QtGui.QMessageBox.Yes)
+            globalvar.concentration = 0
+        else:
+            globalvar.concentration = float(self.dstv.text())
+            QtGui.QMessageBox.about(self, 'Notice', 'The echo file is generated by assuming the destination plate volume is 25ul')
         #print(float(globalvar.concentration))
     def novalues(self):
         globalvar.concentration = 0
