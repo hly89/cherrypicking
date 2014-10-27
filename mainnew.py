@@ -33,9 +33,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.Plate.cellChanged.connect(self.cell_changed)
         #self.Plate.cellEntered.connect(self.cell_entered)
         self.Plate.cellDoubleClicked.connect(self.cell_entered)
+        self.Plate.resizeColumnsToContents()
         self.upload.clicked.connect(self.loadFile)
         self.sourcePlate.clicked.connect(self.loadSourcePlate)
         self.sourcePlate_2.clicked.connect(self.loadSourcePlate2)
+        self.Clear.clicked.connect(self.clear)
         self.picking.clicked.connect(self.cherrypicking)
         self.about.clicked.connect(self.aboutinfo)
         self.Type_choice.activated['QString'].connect(self.type)
@@ -397,8 +399,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         plate_list = {}
         for i, item in enumerate(plate_id):
             
-            plate_list[i] = self.tabs("Plate"+str(i+1))
+            plate_list[i] = self.tabs(str(item))
             globalvar.platetab_idx.append(self.tabWidget.currentIndex()+1)
+            plate_list[i].resizeColumnsToContents()
         for i, item in enumerate(plate_id):
             # subset of the plate info
             #plate_info = sp.query('plate'=='1')
@@ -431,48 +434,59 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     vol_col = col_dp[8:16]
                 else:
                     vol_col = col_dp[16:24]
-                # color the cells for drug1
-                drug1_range = plate_info.at[row, 'Range1']
-                if(drug1_range=='H'):
-                    col_tmp = vol_col[0]
-                    vol_col.pop(0)
-                    for col_id in vol_col:
-                        if(col_id==1 or col_id==9 or col_id==17):
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug1_name))
-                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
-                        else:
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem())
-                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
-                else:
-                    col_tmp = vol_col[0]
-                    vol_col.pop(0)
-                    for col_id in vol_col:
-                        if(col_id==1 or col_id==9 or col_id==17):
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug1_name))
-                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
-                        else:
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem())
-                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
                 # color the cells for drug2
                 drug2_range = plate_info.at[row, 'Range2']
                 if(drug2_range=='H'):
+                    col_tmp = vol_col[0]
+                    vol_col.pop(0)
+                    for col_id in vol_col:
+                        if(col_id==1 or col_id==9 or col_id==17):
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2))
+                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
+                        elif(col_id==2 or col_id==10 or col_id==18):
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2_name))
+                        else:
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"))
+                            #plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
+                else:
+                    col_tmp = vol_col[0]
+                    vol_col.pop(0)
+                    for col_id in vol_col:
+                        if(col_id==1 or col_id==9 or col_id==17):
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2))
+                            plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
+                        elif(col_id==2 or col_id==10 or col_id==18):
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2_name))
+                        else:
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"))
+                            #plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
+                # color the cells for drug1
+                drug1_range = plate_info.at[row, 'Range1']
+                if(drug1_range=='H'):
                     #row_tmp = rindex
                     rindex.pop(0)
                     for row_id in rindex:
                         if(row_id==1 or row_id==9):
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug2_name))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1))
+                            plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(255, 105, 180))
+                        elif(row_id==2 or row_id==10):
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1_name))
                         else:
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem())
-                        plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(255, 105, 180))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"))
+                        #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(255, 105, 180))
                 else:
                     #row_tmp = rindex
                     rindex.pop(0)
                     for row_id in rindex:
                         if(row_id==1 or row_id==9):
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug2_name))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1))
+                            plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
+                        elif(row_id==2 or row_id==10):
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1_name))
+                            #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
                         else:
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem())
-                        plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"))
+                        #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
                 # positive control
                 row_pctr = [0,0,0,8,8,8]
                 col_pctr = [0,8,16,0,8,16]
@@ -548,8 +562,12 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             self.tabWidget.removeTab(each_tab)
         
     def aboutinfo(self):
-        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v3.2 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
+        QtGui.QMessageBox.about(self, 'About', 'Cherry Picking v3.6 \n Author: Liye He \n Contact: liye.he@helsinki.fi')
 
+    def clear(self):
+        self.Plate.show()
+        self.tabWidget.hide()
+        self.picking.setEnabled(False)
 
     # the main part of cherry picking
     def cherrypicking(self):
@@ -575,13 +593,17 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         rna1 = set(globalvar.pairlist['RNA1'])
         rna2 = set(globalvar.pairlist['RNA2'])
         rna1 = set(chain(rna1, rna2))
-        sourcewell = np.zeros(shape=(len(rna1),5))
+        sourcewell = np.zeros(shape=(len(rna1),4))
         #rnatypes = pd.DataFrame(rnatypes)
         rnatypes = globalvar.rna_type
         #sourcewell = rnatypes
         sourcewell = pd.DataFrame(sourcewell)
-        transfervolume = np.zeros(shape=(len(rna1),5))
+        transfervolume = np.zeros(shape=(len(rna1),4))
         transfervolume = pd.DataFrame(transfervolume)
+        
+        sourceplate = np.zeros(shape=(len(rna1),4))
+        sourceplate = pd.DataFrame(sourceplate)
+        
         gene_symbol = list(globalvar.sp2['NCBI gene symbol'])
         # add leading zero when number is less than 10
         leading_zero = lambda n, cnt=2: "%0*d" % (cnt, n)
@@ -590,8 +612,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             #rnatypes.iloc[i, 1:4] = list(globalvar.sp2.iloc[idx, 11])
             # save the plate ID
             #rnatypes.iloc[i, 4] = globalvar.sp2.iloc[1, 0]
-            transfervolume.iloc[i,4] = list(globalvar.sp2.ix[idx, 'Plate Id'])[0]
-            sourcewell.iloc[i, 4] = transfervolume.iloc[i,4]
+            #transfervolume.iloc[i,4] = list(globalvar.sp2.ix[idx, 'Plate Id'])[0]
+            #sourcewell.iloc[i, 4] = transfervolume.iloc[i,4]
+            sourceplate.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Plate Id'])
             sourcewell.iloc[i, 1:4] = list(globalvar.sp2.ix[idx, 'Well'])
             # the concentration in the source well
             source_conc = list(globalvar.sp2.ix[idx, 'Concentration'])
@@ -605,9 +628,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         #rnatypes.iloc[:, 0] = list(rna1)
         sourcewell.iloc[:, 0] = list(rna1)
         transfervolume.iloc[:, 0] = list(rna1)
+        sourceplate.iloc[:, 0] = list(rna1)
         #rnatypes.columns = ['name', 'siRNA1', 'siRNA2', 'siRNA3', 'sourceplate']
-        sourcewell.columns = ['name', 'w1', 'w2', 'w3', 'sourceplate']
-        transfervolume.columns = ['name', 'tv1', 'tv2', 'tv3', 'sourceplate']
+        sourcewell.columns = ['name', 'w1', 'w2', 'w3']
+        transfervolume.columns = ['name', 'tv1', 'tv2', 'tv3']
+        sourceplate.columns = ['name', 'sp1', 'sp2', 'sp3']
         #print(sourcewell)
         cell_line = globalvar.pairlist['cell.line']
         cline_num = set(cell_line)
@@ -633,10 +658,12 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     sourcewell1 = sourcewell[sourcewell['name']==rna1]
                     rnatype1 = rnatypes[rnatypes['name']==rna1]
                     tv1 = transfervolume[transfervolume['name']==rna1]
+                    sourceplate1 = sourceplate[sourceplate['name']==rna1]
                     rna2 = subset_plate.at[row, 'RNA2']
                     sourcewell2 = sourcewell[sourcewell['name']==rna2]
                     rnatype2 = rnatypes[rnatypes['name']==rna2]
                     tv2 = transfervolume[transfervolume['name']==rna2]
+                    sourceplate2 = sourceplate[sourceplate['name']==rna2]
             # get the index info
                     index_plate = subset_plate.at[row, 'Index']
                     index_plate = int(index_plate)-1
@@ -676,7 +703,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                                 vol_columns[col_idx] = leading_zero(vol_columns[col_idx])
                             echo_row.append(vol_index[row_idx]+str(vol_columns[col_idx]))
                             # rna source plate id
-                            echo_row.append(sourcewell1.iloc[0, 4])
+                            #echo_row.append(sourcewell1.iloc[0, 4])
+                            echo_row.append(sourceplate1.iloc[0, col_idx])
                             # rna source well
                             echo_row.append(sourcewell1.iloc[0, col_idx])
                             # rna vol
@@ -701,7 +729,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                                 vol_columns[row_idx] = leading_zero(vol_columns[row_idx])
                             echo_row.append(str(vol_index[col_idx])+str(vol_columns[row_idx]))
                             # rna source plate id
-                            echo_row.append(sourcewell2.iloc[0, 4])
+                            #echo_row.append(sourcewell2.iloc[0, 4])
+                            echo_row.append(sourceplate2.iloc[0, col_idx])
                             # rna source well
                             echo_row.append(sourcewell2.iloc[0, col_idx])
                             # rna vol
@@ -819,7 +848,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         # the transfer volume for different dilutions
         transfer_v = [[25, 7.5, 2.5, 7.5, 25, 7.5, 25], [2.5, 7.5, 25, 7.5, 2.5, 7.5, 25]]
         # the destination concentration for different ranges
-        dst_conc = [[10, 30, 100, 300, 1000, 3000, 10000], [1, 3, 10, 30, 100, 300, 1000]]
+        # dst_conc = [[10, 30, 100, 300, 1000, 3000, 10000], [1, 3, 10, 30, 100, 300, 1000]]
         # designed plate info
         row_dp = map(chr, range(63, 91))[2:18]
         col_dp = range(1,25)
@@ -863,12 +892,12 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     #drug1_conc = dst_conc[0]
                     drug1_dilution = dst_dilution[0]
                     drug1_transfer = transfer_v[0]
-                    drug1_dst_conc = dst_conc[0]
+                    #drug1_dst_conc = dst_conc[0]
                 else:
                     #drug1_conc = dst_conc[1]
                     drug1_dilution = dst_dilution[1]
                     drug1_transfer = transfer_v[1]
-                    drug1_dst_conc = dst_conc[1]
+                    #drug1_dst_conc = dst_conc[1]
         
                 for row_idx in range(0,8):
                     dilution_id = 0
@@ -878,10 +907,14 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             echo_row = []
                             drug_sp = globalvar.sp2[globalvar.sp2['Supplier Ref']==drug1]
                             drug_id = int(drug_sp[drug_sp['Dilution']==drug1_dilution[dilution_id]].index)
-                            # drug1 name
+                            # drug1 ref
                             echo_row.append(drug1)
+                            # drug1 name
+                            echo_row.append(drug_sp.at[drug_id, 'Name'])
                             # drug1 destination concentration
-                            echo_row.append(drug1_dst_conc[col_idx-1])
+                            # echo_row.append(drug1_dst_conc[col_idx-1])
+                            dst_conc = float(drug_sp.at[drug_id, 'SourceConc  (uM)'])*float(drug1_transfer[col_idx-1]) /25
+                            echo_row.append(dst_conc)
                             # drug1 source well
                             echo_row.append(drug_sp.at[drug_id, 'SrcWell'])
                             # drug1 source well Row
@@ -900,6 +933,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             echo_row.append(str(vol_col[col_idx]))
                             # destination plate id
                             echo_row.append(subset_plate.at[row, 'Destination Plate Barcode'])
+                            # drug1 dst plate index
+                            echo_row.append(index_plate)
                             # add the source plate type
                             if(drug_sp.at[drug_id, 'Solvent']=='DMSO'):
                                 echo_row.append("384PP_DMSO2")
@@ -914,11 +949,11 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 if(range_info=='H'):
                     drug2_dilution = dst_dilution[0]
                     drug2_transfer = transfer_v[0]
-                    drug2_dst_conc = dst_conc[0]
+                    #drug2_dst_conc = dst_conc[0]
                 else:
                     drug2_dilution = dst_dilution[1]
                     drug2_transfer = transfer_v[1]
-                    drug2_dst_conc = dst_conc[1]
+                    #drug2_dst_conc = dst_conc[1]
         
                 for row_idx in range(0,8):
                     dilution_id = 0
@@ -927,10 +962,13 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             echo_row = []
                             drug_sp = globalvar.sp2[globalvar.sp2['Supplier Ref']==drug2]
                             drug_id = int(drug_sp[drug_sp['Dilution']==drug2_dilution[dilution_id]].index)
-                            # drug2 name
+                            # drug2 ref
                             echo_row.append(drug2)
-                            # drug1 destination concentration
-                            echo_row.append(drug2_dst_conc[col_idx-1])
+                            # drug2 name
+                            echo_row.append(drug_sp.at[drug_id, 'Name'])
+                            # drug2 destination concentration
+                            dst_conc = float(drug_sp.at[drug_id, 'SourceConc  (uM)'])*float(drug2_transfer[col_idx-1])/25
+                            echo_row.append(dst_conc)
                             # drug2 source well
                             echo_row.append(drug_sp.at[drug_id, 'SrcWell'])
                             # drug2 source well Row
@@ -939,7 +977,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             echo_row.append(drug_sp.at[drug_id, 'Scol'])
                             # drug2 source plate id
                             echo_row.append(drug_sp.at[drug_id, 'Source Plate'])
-                            # drug1 transfer volume
+                            # drug2 transfer volume
                             echo_row.append(drug2_transfer[col_idx-1])
                             # destination well
                             echo_row.append(vol_index[col_idx]+str(vol_col[row_idx]))
@@ -949,6 +987,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                             echo_row.append(str(vol_col[row_idx]))
                             # destination plate id
                             echo_row.append(subset_plate.at[row, 'Destination Plate Barcode'])
+                            # drug2 dst plate index
+                            echo_row.append(index_plate)
                             # add the source plate type
                             if(drug_sp.at[drug_id, 'Solvent']=='DMSO'):
                                 echo_row.append("384PP_DMSO2")
@@ -958,6 +998,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                         dilution_id = dilution_id+1
             # add negative ctr
             dw = ['A1', 'A9', 'A17', 'I1', 'I9', 'I17']
+            dw_index = [1, 3, 5, 2, 4, 6]
             dw_r = ['A', 'A', 'A', 'I', 'I', 'I']
             dw_c = ['1', '9', '17', '1', '9', '17']
             drug_sp = globalvar.sp2[globalvar.sp2['Name']=='DMSO']
@@ -971,8 +1012,9 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             for neg_id, each_neg in enumerate(dw):
                 echo_row = []
                 ctr_idx = neg_idx[id_ctr[neg_id]]
-                # drug2 name
-                echo_row.append('dmso')
+                # drug2 ref
+                echo_row.append('NegCtr')
+                echo_row.append('DMSO')
                 # dst conc
                 echo_row.append(0)
                 # drug2 source well
@@ -983,6 +1025,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 echo_row.append(drug_sp.at[ctr_idx, 'Scol'])
                 # drug2 source plate id
                 echo_row.append(drug_sp.at[ctr_idx, 'Source Plate'])
+                # source plate index
                 # drug1 transfer volume
                 echo_row.append(50)
                 # destination well
@@ -993,6 +1036,8 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 echo_row.append(dw_c[neg_id])
                 # destination plate id
                 echo_row.append(each_plate)
+                # dst plate index
+                echo_row.append(dw_index[neg_id])
                 # add the source plate type
                 if(drug_sp.at[ctr_idx, 'Solvent']=='DMSO'):
                     echo_row.append("384PP_DMSO2")
@@ -1016,6 +1061,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 echo_row = []
                 ctr_idx = neg_idx[id_ctr[neg_id]]
                 # drug2 name
+                echo_row.append('PosCtr')
                 echo_row.append('BzCl')
                 # dst conc
                 echo_row.append(100)
@@ -1037,13 +1083,15 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 echo_row.append(dw_c[neg_id])
                 # destination plate id
                 echo_row.append(each_plate)
+                # dst plate index
+                echo_row.append(dw_index[neg_id])
                 if(drug_sp.at[ctr_idx, 'Solvent']=='DMSO'):
                     echo_row.append("384PP_DMSO2")
                 else:
                     echo_row.append("384PP_AQ_BP2")
                 echo.append(echo_row)
         echo = pd.DataFrame(echo)
-        echo.columns = ['Drug', 'Destination Concentration', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Source Plate Type']
+        echo.columns = ['Supplier Ref', 'Drug Name', 'Destination Concentration', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Index','Source Plate Type']
         # sort the data
         echo[['SCol','DCol']] = echo[['SCol', 'DCol']].astype(float)
         echo = echo.sort(['Source Plate Barcode', 'Destination Plate Barcode', 'SCol', 'SRow', 'DCol', 'DRow'],ascending=[True, True, True, True, True, True])
