@@ -189,7 +189,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 self.Plate.show()
                 return
         else:
-            if(set(Header).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode']))==False):
+            if(set(Header).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode', 'Copy']))==False):
                 QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                 self.tabWidget.hide()
                 self.Plate.show()
@@ -401,7 +401,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
             
             plate_list[i] = self.tabs(str(item))
             globalvar.platetab_idx.append(self.tabWidget.currentIndex()+1)
-            plate_list[i].resizeColumnsToContents()
+            #plate_list[i].resizeColumnsToContents()
         for i, item in enumerate(plate_id):
             # subset of the plate info
             #plate_info = sp.query('plate'=='1')
@@ -419,46 +419,46 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 index_plate = plate_info.at[row, 'Index']
                 index_plate = int(index_plate)
                 #index_plate = int(index_plate)-1
-                # devide the plate into three rows and five columns so in total 15 4*4 array
+                # devide the plate into 6 4*4 array
                 # which row
                 if(index_plate%2==0):
                     # row 2
-                    rindex = row_dp[8:16]
+                    rindex = row_dp[4:8]
                 else:
                     # row 1
-                    rindex = row_dp[0:8]
+                    rindex = row_dp[0:4]
                 # which column
                 if(index_plate==1 or index_plate==2):
-                    vol_col = col_dp[0:8]
+                    vol_col = col_dp[0:4]
                 elif(index_plate==3 or index_plate==4):
-                    vol_col = col_dp[8:16]
+                    vol_col = col_dp[4:8]
                 else:
-                    vol_col = col_dp[16:24]
+                    vol_col = col_dp[8:12]
                 # color the cells for drug2
                 drug2_range = plate_info.at[row, 'Range2']
                 if(drug2_range=='H'):
                     col_tmp = vol_col[0]
                     vol_col.pop(0)
                     for col_id in vol_col:
-                        if(col_id==1 or col_id==9 or col_id==17):
+                        if(col_id==1 or col_id==5 or col_id==9):
                             plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2))
                             plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
-                        elif(col_id==2 or col_id==10 or col_id==18):
+                        elif(col_id==2 or col_id==6 or col_id==10):
                             plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2_name))
                         else:
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"))
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"+u"\u2193"))
                             #plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(255, 105, 180))
                 else:
                     col_tmp = vol_col[0]
                     vol_col.pop(0)
                     for col_id in vol_col:
-                        if(col_id==1 or col_id==9 or col_id==17):
+                        if(col_id==1 or col_id==5 or col_id==9):
                             plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2))
                             plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
-                        elif(col_id==2 or col_id==10 or col_id==18):
+                        elif(col_id==2 or col_id==6 or col_id==10):
                             plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(drug2_name))
                         else:
-                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"))
+                            plate_list[i].setItem(rindex[0], col_id, QtGui.QTableWidgetItem(u"\u2193"+u"\u2193"))
                             #plate_list[i].item(rindex[0], col_id).setBackground(QtGui.QColor(0, 250, 154))
                 # color the cells for drug1
                 drug1_range = plate_info.at[row, 'Range1']
@@ -466,38 +466,38 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     #row_tmp = rindex
                     rindex.pop(0)
                     for row_id in rindex:
-                        if(row_id==1 or row_id==9):
+                        if(row_id==1 or row_id==5):
                             plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1))
                             plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(255, 105, 180))
-                        elif(row_id==2 or row_id==10):
+                        elif(row_id==2 or row_id==6):
                             plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1_name))
                         else:
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"+u"\u2192"))
                         #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(255, 105, 180))
                 else:
                     #row_tmp = rindex
                     rindex.pop(0)
                     for row_id in rindex:
-                        if(row_id==1 or row_id==9):
+                        if(row_id==1 or row_id==5):
                             plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1))
                             plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
-                        elif(row_id==2 or row_id==10):
+                        elif(row_id==2 or row_id==6):
                             plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(drug1_name))
                             #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
                         else:
-                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"))
+                            plate_list[i].setItem(row_id, col_tmp, QtGui.QTableWidgetItem(u"\u2192"+u"\u2192"))
                         #plate_list[i].item(row_id, col_tmp).setBackground(QtGui.QColor(0, 250, 154))
                 # positive control
-                row_pctr = [0,0,0,8,8,8]
-                col_pctr = [0,8,16,0,8,16]
+                row_pctr = [0,0,0,4,4,4]
+                col_pctr = [0,4,8,0,4,8]
                 # add color the control position 
                 for idx_ctr, ctr in enumerate(row_pctr):
                     plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem())
                     plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(119, 136, 153))
         
                 # negative control
-                row_pctr = [7,7,7,15,15,15]
-                col_pctr = [7,15,23,7,15,23]
+                row_pctr = [3,3,3,15,15,15]
+                col_pctr = [3,7,11,3,7,11]
                 for idx_ctr, ctr in enumerate(row_pctr):
                     plate_list[i].setItem(ctr, col_pctr[idx_ctr], QtGui.QTableWidgetItem())
                     plate_list[i].item(ctr, col_pctr[idx_ctr]).setBackground(QtGui.QColor(238, 99, 99))
@@ -530,7 +530,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 #self.Plate.show()
                 #return
             else:
-                if(set(globalvar.pairlist.columns).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode']))==False):
+                if(set(globalvar.pairlist.columns).issubset(set(['Index', 'Drug1', 'Drug2', 'Range1', 'Range2', 'Destination Plate Barcode', 'Copy']))==False):
                     QtGui.QMessageBox.warning(self, 'Error', 'The input format is not correct. Please check the input file or chose the correct experiment type!', QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
                     self.picking.setEnabled(False)
                 else:
@@ -860,8 +860,24 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         #Solvent = globalvar.sp2['Solvent'][0]
         plate = set(plate_sub)
         #plate = sorted(plate)
+        # save all the copy plate info
+        plate_copy = []
         for each_plate in plate:
             subset_plate = globalvar.pairlist[globalvar.pairlist['Destination Plate Barcode']==each_plate]
+            # get the copy info
+            subset_copy = list(subset_plate.ix[:, 'Copy'])[0]
+            
+            
+            #plate_list.append(each_plate)
+            name_plate = each_plate.split("-")
+            for each_copy in range(2, int(subset_copy)+1):
+                plate_list = []
+                if(each_copy<9):
+                    plate_list.append(name_plate[0]+"-"+name_plate[1]+"-"+"0"+str(each_copy))
+                else:
+                    plate_list.append(name_plate[0]+"-"+name_plate[1]+"-"+str(each_copy))
+                plate_list.append(each_plate)
+                plate_copy.append(plate_list)
             for row in subset_plate.index:
                 # side A of the plate
                 drug1 = subset_plate.at[row, 'Drug1']
@@ -1091,9 +1107,20 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     echo_row.append("384PP_AQ_BP2")
                 echo.append(echo_row)
         echo = pd.DataFrame(echo)
+        plate_copy = pd.DataFrame(plate_copy)
+        plate_copy.columns = ['Copy', 'Index']
         echo.columns = ['Supplier Ref', 'Drug Name', 'Destination Concentration', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Index','Source Plate Type']
         # sort the data
         echo[['SCol','DCol']] = echo[['SCol', 'DCol']].astype(float)
+        for each_plate in plate:
+            sub_copy = plate_copy[plate_copy['Index']==each_plate]
+            sub_echo = echo[echo['Destination Plate Barcode']==each_plate].copy()
+            for each_copy in sub_copy.ix[:, 'Copy']:
+                # get the row count of sub_echo
+                rc = len(sub_echo.index)
+                sub_echo['Destination Plate Barcode'] = [each_copy]*rc
+                #echo.append(sub_echo)
+                echo = pd.concat([echo, sub_echo], ignore_index=True)
         echo = echo.sort(['Source Plate Barcode', 'Destination Plate Barcode', 'SCol', 'SRow', 'DCol', 'DRow'],ascending=[True, True, True, True, True, True])
         outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
         echo.to_csv(outputFile, sep=',', header=True, index=False)
