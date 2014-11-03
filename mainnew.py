@@ -33,7 +33,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         self.Plate.cellChanged.connect(self.cell_changed)
         #self.Plate.cellEntered.connect(self.cell_entered)
         self.Plate.cellDoubleClicked.connect(self.cell_entered)
-        self.Plate.resizeColumnsToContents()
+        #self.Plate.resizeColumnsToContents()
         self.upload.clicked.connect(self.loadFile)
         self.sourcePlate.clicked.connect(self.loadSourcePlate)
         self.sourcePlate_2.clicked.connect(self.loadSourcePlate2)
@@ -385,7 +385,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
         # get the plate info
         plate_id = set(globalvar.pairlist['Destination Plate Barcode'])
         # sort the plate id
-        #plate_id = sorted(plate_id)
+        plate_id = sorted(plate_id)
         #print(plate_id)
         # designed plate info
         row_dp = range(0,17)
@@ -413,6 +413,7 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                 drug1_name = ''.join(set(drug1_sp['Name']))
                 #print(drug1_name)
                 drug2 = plate_info.at[row, 'Drug2']
+                #print(drug2)
                 drug2_sp = globalvar.sp2[globalvar.sp2['Supplier Ref']==drug2]
                 drug2_name = ''.join(set(drug2_sp['Name']))
                 # get the index info
@@ -1107,20 +1108,23 @@ class cherryView(QtGui.QMainWindow, Ui_mainform):
                     echo_row.append("384PP_AQ_BP2")
                 echo.append(echo_row)
         echo = pd.DataFrame(echo)
-        plate_copy = pd.DataFrame(plate_copy)
-        plate_copy.columns = ['Copy', 'Index']
+        
         echo.columns = ['Supplier Ref', 'Drug Name', 'Destination Concentration', 'Source Well', 'SRow', 'SCol', 'Source Plate Barcode', 'Transfer Volume', 'Destination Well', 'DRow', 'DCol', 'Destination Plate Barcode', 'Index','Source Plate Type']
         # sort the data
         echo[['SCol','DCol']] = echo[['SCol', 'DCol']].astype(float)
-        for each_plate in plate:
-            sub_copy = plate_copy[plate_copy['Index']==each_plate]
-            sub_echo = echo[echo['Destination Plate Barcode']==each_plate].copy()
-            for each_copy in sub_copy.ix[:, 'Copy']:
-                # get the row count of sub_echo
-                rc = len(sub_echo.index)
-                sub_echo['Destination Plate Barcode'] = [each_copy]*rc
-                #echo.append(sub_echo)
-                echo = pd.concat([echo, sub_echo], ignore_index=True)
+        if(len(plate_copy)!=0):
+            plate_copy = pd.DataFrame(plate_copy)
+            plate_copy.columns = ['Copy', 'Index']
+            for each_plate in plate:
+                sub_copy = plate_copy[plate_copy['Index']==each_plate]
+                sub_echo = echo[echo['Destination Plate Barcode']==each_plate].copy()
+                for each_copy in sub_copy.ix[:, 'Copy']:
+                    # get the row count of sub_echo
+                    rc = len(sub_echo.index)
+                    sub_echo['Destination Plate Barcode'] = [each_copy]*rc
+                    #echo.append(sub_echo)
+                    echo = pd.concat([echo, sub_echo], ignore_index=True)
+        
         echo = echo.sort(['Source Plate Barcode', 'Destination Plate Barcode', 'SCol', 'SRow', 'DCol', 'DRow'],ascending=[True, True, True, True, True, True])
         outputFile = QtGui.QFileDialog.getSaveFileName(self, 'Save File', '', 'CSV(*.csv)')
         echo.to_csv(outputFile, sep=',', header=True, index=False)
